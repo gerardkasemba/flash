@@ -139,7 +139,7 @@ export default function NotesAndFlashcards() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer `,
+          Authorization: `Bearer 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`,
         },
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
