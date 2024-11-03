@@ -7,9 +7,45 @@ import Footer from "./Footer";
 import { Viewer } from "@react-pdf-viewer/core";
 import "@react-pdf-viewer/core/lib/styles/index.css";
 import { pdfjs } from "react-pdf";
+import { CloudArrowUpIcon, EyeIcon } from "@heroicons/react/24/solid";
 
-// Set workerSrc to the locally served worker file
-pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
+pdfjs.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.js`;
+
+// Upload Section Component
+function UploadSection({ setFileUrl, setSelectedFile }) {
+  const handleFileUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      const fileURL = URL.createObjectURL(file);
+      setFileUrl(fileURL);
+    }
+  };
+
+  return (
+    <div className="bg-gradient-to-r from-indigo-100 via-blue-100 to-purple-100 p-8 rounded-lg shadow-lg">
+      <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">
+        <CloudArrowUpIcon className="h-8 w-8 inline-block text-indigo-500 mr-2" />
+        Upload Your Document
+      </h2>
+      <p className="text-gray-600 mb-4 text-center">
+        Upload a PDF file to preview it below and start taking notes.
+      </p>
+      <div className="flex justify-center mb-6">
+        <label className="cursor-pointer flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition">
+          <input
+            type="file"
+            accept=".pdf,.doc,.docx"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <CloudArrowUpIcon className="h-6 w-6" />
+          <span className="font-semibold">Choose File</span>
+        </label>
+      </div>
+    </div>
+  );
+}
 
 export default function NotesAndFlashcards() {
   const [notes, setNotes] = useState([]);
@@ -109,6 +145,14 @@ export default function NotesAndFlashcards() {
     updateData("delete", { noteId });
   };
 
+  // Pagination Logic
+  const indexOfLastNote = currentPage * notesPerPage;
+  const indexOfFirstNote = indexOfLastNote - notesPerPage;
+  const currentNotes = notes.slice(indexOfFirstNote, indexOfLastNote);
+  const totalPages = Math.ceil(notes.length / notesPerPage);
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
   const handleGenerateFlashcards = async () => {
     if (notes.length === 0) {
       alert("Please add some notes to generate flashcards.");
@@ -116,7 +160,7 @@ export default function NotesAndFlashcards() {
     }
 
     setIsGenerating(true);
-    setFlashcards([]);
+    setFlashcards([]); // Clear previous flashcards
 
     try {
       const notesText = notes.map((note) => note.content).join("\n");
@@ -139,7 +183,7 @@ export default function NotesAndFlashcards() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer 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`,
+          Authorization: `Bearer YOUR_OPENAI_API_KEY`, // Replace with your OpenAI API key
         },
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
@@ -181,179 +225,164 @@ export default function NotesAndFlashcards() {
     }
   };
 
-  const indexOfLastNote = currentPage * notesPerPage;
-  const indexOfFirstNote = indexOfLastNote - notesPerPage;
-  const currentNotes = notes.slice(indexOfFirstNote, indexOfLastNote);
-  const totalPages = Math.ceil(notes.length / notesPerPage);
-
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
-
-  const handleFileUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      const fileURL = URL.createObjectURL(file);
-      setFileUrl(fileURL);
-    }
-  };
-
   return (
     <>
       <Navbar />
       <div className="container mx-auto py-8 px-4 md:px-12 lg:px-24 grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-gray-100 p-6 rounded-lg shadow-lg">
-          <h2 className="text-2xl font-semibold mb-4">Upload PDF or DOC File</h2>
-          <input
-            type="file"
-            accept=".pdf,.doc,.docx"
-            onChange={handleFileUpload}
-            className="mb-4"
-          />
-          {fileUrl && selectedFile.type === "application/pdf" ? (
-            <div className="mt-4">
-              <Viewer fileUrl={fileUrl} />
-            </div>
-          ) : (
-            <p className="text-gray-600">Please upload a PDF to preview it here.</p>
-          )}
-        </div>
+        {/* Left Section: Upload Section */}
+        <UploadSection setFileUrl={setFileUrl} setSelectedFile={setSelectedFile} />
 
-{/* Right Section: Notes, Forms, and Flashcards */}
-<div>
-  <h1 className="text-3xl font-bold text-center text-blue-600 mb-6">Notes and Flashcards</h1>
+        {/* PDF Preview */}
+        {fileUrl && selectedFile && selectedFile.type === "application/pdf" && (
+          <div className="bg-white p-4 rounded-md shadow-lg mb-8">
+            <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
+              <EyeIcon className="h-5 w-5 text-indigo-500 mr-1" />
+              Document Preview
+            </h3>
+            <Viewer fileUrl={fileUrl} />
+          </div>
+        )}
 
-  <div className="mb-8">
-    <textarea
-      value={newNote}
-      onChange={(e) => setNewNote(e.target.value)}
-      placeholder="Write a new note..."
-      className="w-full p-4 border border-gray-300 rounded-lg mb-2"
-    />
-    <select
-      value={newCategory}
-      onChange={(e) => setNewCategory(e.target.value)}
-      className="w-full p-2 border border-gray-300 rounded-lg mb-2"
-    >
-      {categories.map((category) => (
-        <option key={category} value={category}>
-          {category}
-        </option>
-      ))}
-    </select>
-    <button
-      onClick={handleAddNote}
-      className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg"
-    >
-      Add Note
-    </button>
-  </div>
+        {/* Right Section: Notes, Forms, and Flashcards */}
+        <div>
+          <h1 className="text-3xl font-bold text-center text-blue-600 mb-6">Notes and Flashcards</h1>
 
-  <div className="mb-10">
-    <h2 className="text-2xl font-semibold text-blue-600 mb-4">Your Notes</h2>
-    {currentNotes.length > 0 ? (
-      <ul className="space-y-4">
-        {currentNotes.map((note) => (
-          <li key={note.id} className="bg-blue-50 p-4 rounded-lg shadow-md">
-            {editNoteId === note.id ? (
-              <>
-                <textarea
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded mb-2"
-                />
-                <select
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded mb-2"
-                >
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-                <div className="flex justify-end space-x-2">
-                  <button onClick={handleSaveEdit} className="bg-green-500 text-white px-4 py-1 rounded">
-                    Save
-                  </button>
-                  <button onClick={handleCancelEdit} className="bg-gray-500 text-white px-4 py-1 rounded">
-                    Cancel
-                  </button>
-                </div>
-              </>
+          {/* Add New Note */}
+          <div className="mb-8">
+            <textarea
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              placeholder="Write a new note..."
+              className="w-full p-4 border border-gray-300 rounded-lg mb-2"
+            />
+            <select
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-lg mb-2"
+            >
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleAddNote}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg"
+            >
+              Add Note
+            </button>
+          </div>
+
+          {/* Notes List */}
+          <div className="mb-10">
+            <h2 className="text-2xl font-semibold text-blue-600 mb-4">Your Notes</h2>
+            {currentNotes.length > 0 ? (
+              <ul className="space-y-4">
+                {currentNotes.map((note) => (
+                  <li key={note.id} className="bg-blue-50 p-4 rounded-lg shadow-md">
+                    {editNoteId === note.id ? (
+                      <>
+                        <textarea
+                          value={editContent}
+                          onChange={(e) => setEditContent(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded mb-2"
+                        />
+                        <select
+                          value={editCategory}
+                          onChange={(e) => setEditCategory(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded mb-2"
+                        >
+                          {categories.map((category) => (
+                            <option key={category} value={category}>
+                              {category}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="flex justify-end space-x-2">
+                          <button onClick={handleSaveEdit} className="bg-green-500 text-white px-4 py-1 rounded">
+                            Save
+                          </button>
+                          <button onClick={handleCancelEdit} className="bg-gray-500 text-white px-4 py-1 rounded">
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-700 mb-2">
+                          <strong>Note:</strong> {note.content}
+                        </p>
+                        <p className="text-gray-500">
+                          <strong>Category:</strong> {note.category}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <button onClick={() => handleEditNote(note)} className="text-blue-500 hover:text-blue-700">
+                            Edit
+                          </button>
+                          <button onClick={() => handleRemoveNote(note.id)} className="text-red-500 hover:text-red-700">
+                            Delete
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
             ) : (
-              <>
-                <p className="text-gray-700 mb-2">
-                  <strong>Note:</strong> {note.content}
-                </p>
-                <p className="text-gray-500">
-                  <strong>Category:</strong> {note.category}
-                </p>
-                <div className="flex items-center justify-between">
-                  <button onClick={() => handleEditNote(note)} className="text-blue-500 hover:text-blue-700">
-                    Edit
-                  </button>
-                  <button onClick={() => handleRemoveNote(note.id)} className="text-red-500 hover:text-red-700">
-                    Delete
-                  </button>
-                </div>
-              </>
+              <p className="text-gray-500">No notes yet. Start adding notes above.</p>
             )}
-          </li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-gray-500">No notes yet. Start adding notes above.</p>
-    )}
 
-    <div className="flex justify-center mt-6 space-x-2">
-      {[...Array(totalPages)].map((_, i) => (
-        <button
-          key={i}
-          onClick={() => paginate(i + 1)}
-          className={`px-3 py-1 rounded ${currentPage === i + 1 ? "bg-blue-500 text-white" : "bg-gray-300"}`}
-        >
-          {i + 1}
-        </button>
-      ))}
-    </div>
-  </div>
+            {/* Pagination Controls */}
+            <div className="flex justify-center mt-6 space-x-2">
+              {[...Array(totalPages)].map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => paginate(i + 1)}
+                  className={`px-3 py-1 rounded ${currentPage === i + 1 ? "bg-blue-500 text-white" : "bg-gray-300"}`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          </div>
 
-  <div className="text-center mb-8">
-    <button
-      onClick={handleGenerateFlashcards}
-      className={`bg-green-600 text-white px-6 py-2 rounded-lg shadow-lg ${
-        isGenerating && "opacity-50 cursor-not-allowed"
-      }`}
-      disabled={isGenerating}
-    >
-      {isGenerating ? "Generating Flashcards..." : "Generate Flashcards from Notes"}
-    </button>
-  </div>
+          {/* Flashcards Section */}
+          <div className="text-center mb-8">
+            <button
+              onClick={handleGenerateFlashcards}
+              className={`bg-green-600 text-white px-6 py-2 rounded-lg shadow-lg ${
+                isGenerating && "opacity-50 cursor-not-allowed"
+              }`}
+              disabled={isGenerating}
+            >
+              {isGenerating ? "Generating Flashcards..." : "Generate Flashcards from Notes"}
+            </button>
+          </div>
 
-  <div>
-    <h2 className="text-2xl font-semibold text-blue-600 mb-4">Generated Flashcards</h2>
-    {flashcards.length > 0 ? (
-      <ul className="space-y-4">
-        {flashcards.map((flashcard) => (
-          <li
-            key={flashcard.id}
-            className="bg-white p-4 rounded-lg shadow-md border border-gray-200"
-          >
-            <p className="font-semibold text-lg text-gray-800">
-              <strong>Q:</strong> {flashcard.question}
-            </p>
-            <p className="mt-2 text-gray-700">
-              <strong>A:</strong> {flashcard.answer}
-            </p>
-          </li>
-        ))}
-      </ul>
-    ) : (
-      <p className="text-gray-500">No flashcards generated yet.</p>
-    )}
-  </div>
-</div>
+          <div>
+            <h2 className="text-2xl font-semibold text-blue-600 mb-4">Generated Flashcards</h2>
+            {flashcards.length > 0 ? (
+              <ul className="space-y-4">
+                {flashcards.map((flashcard) => (
+                  <li
+                    key={flashcard.id}
+                    className="bg-white p-4 rounded-lg shadow-md border border-gray-200"
+                  >
+                    <p className="font-semibold text-lg text-gray-800">
+                      <strong>Q:</strong> {flashcard.question}
+                    </p>
+                    <p className="mt-2 text-gray-700">
+                      <strong>A:</strong> {flashcard.answer}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-gray-500">No flashcards generated yet.</p>
+            )}
+          </div>
+        </div>
       </div>
       <Footer />
     </>
